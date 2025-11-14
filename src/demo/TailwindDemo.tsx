@@ -1,4 +1,12 @@
+import {getAllLessons} from "../lib/crud.ts";
+
 export default function TailwindDemo() {
+
+  async function fetchLessons() {
+    const lessons = await getAllLessons();
+    console.log(lessons);
+  }
+
   return (
     <div className="w-full max-w-4xl mx-auto mt-12 space-y-8">
       <section className="bg-white text-gray-900 p-6 rounded-lg shadow">
@@ -121,6 +129,7 @@ export default function TailwindDemo() {
           </article>
         </div>
       </section>
+      <button onClick={fetchLessons}>testset</button>
     </div>
   )
 }
