@@ -1,4 +1,3 @@
-// src/pages/Dashboard.tsx
 import { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useUser } from '../hooks/useUser.ts';

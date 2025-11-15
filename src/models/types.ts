@@ -2,6 +2,8 @@
 // LESSON & CONTENT TYPES
 // ============================================
 
+import type {Timestamp} from "firebase/firestore";
+
 export interface Lesson {
     id: string;
     title: string;
@@ -140,9 +142,16 @@ export interface FillBlankExercise extends BaseExercise {
 
 export interface FillBlankMultipleExercise extends BaseExercise {
     type: 'fill_blank_multiple';
-    sentence: string;
-    sentenceFy?: string;
+    question: string;
+    questionFy?: string;
     blanks: BlankField[];
+}
+
+export interface ExerciseResult {
+    exerciseId: string;
+    isCorrect: boolean;
+    timeSpent: number; // in seconden
+    userAnswer?: string | string[];
 }
 
 export interface BlankField {
@@ -382,4 +391,17 @@ export interface LearningReport {
         target: string;
         progress: number; // 0-1
     };
+}
+
+// Per exercise bij gebruiker opgeslagen
+export interface SpacedRepetitionData {
+    easeFactor: number; // 1.3 - 2.5 (moeilijkheidsgraad voor gebruiker)
+    interval: number; // dagen tot volgende herhaling
+    repetitions: number; // aantal keer correct herhaald
+    nextReviewDate: Timestamp;
+
+    // Formule (vereenvoudigd SM-2 algoritme):
+    // - Als fout: interval = 1 dag, easeFactor -= 0.2
+    // - Als goed: interval = interval * easeFactor, easeFactor += 0.1 (max 2.5)
+    // - Na 3x correct: item is "geleerd"
 }

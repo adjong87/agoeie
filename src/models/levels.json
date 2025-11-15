@@ -1,0 +1,14 @@
+{
+  "levels": [
+    {"level": 1, "minXP": 0, "maxXP": 100, "title": "Beginner", "titleFy": "Begjinner"},
+    {"level": 2, "minXP": 100, "maxXP": 250, "title": "Leerling", "titleFy": "Learling"},
+    {"level": 3, "minXP": 250, "maxXP": 500, "title": "Student", "titleFy": "Student"},
+    {"level": 4, "minXP": 500, "maxXP": 850, "title": "Beoefenaar", "titleFy": "Beoefener"},
+    {"level": 5, "minXP": 850, "maxXP": 1300, "title": "Gevorderde", "titleFy": "Foardere"},
+    {"level": 6, "minXP": 1300, "maxXP": 1900, "title": "Expert", "titleFy": "Ekspert"},
+    {"level": 7, "minXP": 1900, "maxXP": 2600, "title": "Meester", "titleFy": "Master"},
+    {"level": 8, "minXP": 2600, "maxXP": 3500, "title": "Grootmeester", "titleFy": "Grut master"},
+    {"level": 9, "minXP": 3500, "maxXP": 4600, "title": "Legende", "titleFy": "Leginde"},
+    {"level": 10, "minXP": 4600, "maxXP": 6000, "title": "Fries Icoon", "titleFy": "Frysk Ikoan"}
+  ]
+}
