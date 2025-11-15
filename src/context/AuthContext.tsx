@@ -6,11 +6,14 @@ import {auth} from '../lib/firebase';
 interface AuthContextType {
     user: User | null;
     loading: boolean;
+    // internal flag to detect absence of provider when consumed from hooks
+    __fromDefault?: true;
 }
 
-const AuthContext = createContext<AuthContextType>({
+export const AuthContext = createContext<AuthContextType>({
     user: null,
     loading: true,
+    __fromDefault: true,
 });
 
 export function useAuth() {

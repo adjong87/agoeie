@@ -1,11 +1,13 @@
 import { completeLessonProgress, checkAndUnlockAchievements } from '../lib/crud.ts'
 
-async function completeLessonHandler(
+// Reusable helper to finalize a lesson. Call this from pages/components.
+export async function completeLessonHandler(
     userId: string,
     lessonId: string,
     totalScore: number,
     totalTime: number,
-    xpEarned: number
+    xpEarned: number,
+    navigate: (to: string) => void
 ) {
     try {
         // Markeer les als voltooid
@@ -22,7 +24,7 @@ async function completeLessonHandler(
         }
 
         // Navigeer naar overzichtspagina
-        router.push('/lessons');
+        navigate('/lessons');
     } catch (error) {
         console.error('Error completing lesson:', error);
     }

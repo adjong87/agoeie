@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type {MultipleChoiceExercise} from "../../models/types.ts";
 
 interface Props {
@@ -9,6 +9,12 @@ interface Props {
 export default function MultipleChoiceComponent({ exercise, onSubmit }: Props) {
     const [selectedOption, setSelectedOption] = useState<string | null>(null);
     const [submitted, setSubmitted] = useState(false);
+
+    // Reset local state when we move to a new exercise (e.g., two MC in a row)
+    useEffect(() => {
+        setSelectedOption(null);
+        setSubmitted(false);
+    }, [exercise.id]);
 
     const handleSubmit = () => {
         if (!selectedOption) return;

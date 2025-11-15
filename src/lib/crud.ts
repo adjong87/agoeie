@@ -60,17 +60,20 @@ export async function getAllLessons(): Promise<Lesson[]> {
 
 export async function getLessonsByTopic(topic: string): Promise<Lesson[]> {
     try {
+        // Avoid composite index requirement by removing orderBy from Firestore query
+        // and sorting client-side by the numeric 'order' field
         const lessonsQuery = query(
             collection(db, 'lessons'),
-            where('topic', '==', topic),
-            orderBy('order', 'asc')
+            where('topic', '==', topic)
         );
         const snapshot = await getDocs(lessonsQuery);
 
-        return snapshot.docs.map(doc => ({
+        const items = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
         })) as Lesson[];
+
+        return items.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     } catch (error) {
         console.error('Error fetching lessons by topic:', error);
         return [];
@@ -79,17 +82,20 @@ export async function getLessonsByTopic(topic: string): Promise<Lesson[]> {
 
 export async function getLessonsByLevel(level: string): Promise<Lesson[]> {
     try {
+        // Avoid composite index requirement by removing orderBy from Firestore query
+        // and sorting client-side by the numeric 'order' field
         const lessonsQuery = query(
             collection(db, 'lessons'),
-            where('level', '==', level),
-            orderBy('order', 'asc')
+            where('level', '==', level)
         );
         const snapshot = await getDocs(lessonsQuery);
 
-        return snapshot.docs.map(doc => ({
+        const items = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
         })) as Lesson[];
+
+        return items.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     } catch (error) {
         console.error('Error fetching lessons by level:', error);
         return [];

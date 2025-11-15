@@ -44,7 +44,7 @@ export default function ExerciseComponent({
 
     return (
         <div>
-            <h3>{exercise.question}</h3>
+            <h3>{getExercisePrompt(exercise)}</h3>
             <input
                 value={userAnswer}
                 onChange={(e) => setUserAnswer(e.target.value)}
@@ -63,4 +63,22 @@ function checkAnswer(userAnswer: string, exercise: Exercise): boolean {
     }
     // ... andere types
     return false;
+}
+
+function getExercisePrompt(exercise: Exercise): string {
+    switch (exercise.type) {
+        case 'multiple_choice':
+        case 'fill_blank':
+        case 'fill_blank_multiple':
+        case 'word_order':
+        case 'match_pairs':
+        case 'translation':
+            // These exercise types have a question field
+            return exercise.question;
+        case 'conjugation':
+            // Conjugation exercises don't have a generic question field
+            return `Vervoeg het werkwoord: ${exercise.verb} (${exercise.translation})`;
+        default:
+            return 'Oefening';
+    }
 }

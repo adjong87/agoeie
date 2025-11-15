@@ -1,10 +1,12 @@
 // src/pages/LessonDetailPage.tsx
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getLesson, getExercisesByIds, recordExerciseAttempt } from '../lib/crud';
+import { getLesson, getExercisesByIds, recordExerciseAttempt, completeLessonProgress, checkAndUnlockAchievements } from '../lib/crud';
 import ExerciseWrapper from '../components/exercises/ExerciseWrapper';
 import {useAuth} from "../hooks/useAuth.ts";
 import type {Exercise, ExerciseResult, Lesson} from "../models/types.ts";
+import LessonProgress from "../components/LessonProgress.tsx";
+import {completeLessonHandler} from "../components/LessonComplete.tsx";
 
 export default function LessonDetailPage() {
     const { lessonId } = useParams<{ lessonId: string }>();
@@ -17,6 +19,8 @@ export default function LessonDetailPage() {
     const [results, setResults] = useState<ExerciseResult[]>([]);
     const [loading, setLoading] = useState(true);
     const [showContent, setShowContent] = useState(true); // Toggle tussen content en oefeningen
+    const [hasSavedCompletion, setHasSavedCompletion] = useState(false);
+    // const [lessonStart, setLessonStart] = useState<number | null>(null);
 
     // Laad les data
     useEffect(() => {
@@ -60,7 +64,7 @@ export default function LessonDetailPage() {
     // Handler voor wanneer een oefening is voltooid
     const handleExerciseComplete = async (result: ExerciseResult) => {
         // Bewaar resultaat
-        setResults([...results, result]);
+        setResults(prev => [...prev, result]);
 
         // Sla op in Firebase (alleen als user is ingelogd)
         if (user) {
@@ -83,27 +87,63 @@ export default function LessonDetailPage() {
                 setCurrentExerciseIndex(currentExerciseIndex + 1);
             }, 500);
         } else {
-            // Alle oefeningen voltooid
-            setTimeout(() => {
-                handleLessonComplete();
-            }, 1000);
+            // Laat afrondscherm zien
+            setCurrentExerciseIndex(exercises.length);
         }
     };
 
+    // Wanneer alle oefeningen klaar zijn: sla voortgang op (eenmalig) zodat dashboard wordt geüpdatet
+    useEffect(() => {
+        const isFinished = currentExerciseIndex >= exercises.length && exercises.length > 0;
+        if (!isFinished || hasSavedCompletion) return;
+
+        const saveCompletion = async () => {
+            const totalCorrect = results.filter(r => r.isCorrect).length;
+            const score = Math.round((totalCorrect / Math.max(1, exercises.length)) * 100);
+            const totalXP = results.reduce((sum, r) => {
+                const exercise = exercises.find(e => e.id === r.exerciseId);
+                return sum + (r.isCorrect ? (exercise?.xpReward || 0) : 0);
+            }, 0);
+            const timeSpent = results.reduce((sum, r) => sum + (r.timeSpent || 0), 0);
+
+            if (user && lessonId) {
+                try {
+                    await completeLessonProgress(user.uid, lessonId, score, timeSpent, totalXP);
+                    await checkAndUnlockAchievements(user.uid);
+                    setHasSavedCompletion(true);
+                } catch (e) {
+                    console.error('Auto complete lesson failed:', e);
+                }
+            }
+        };
+
+        void saveCompletion();
+    }, [currentExerciseIndex, exercises, hasSavedCompletion, lessonId, results, user]);
+
     // Handler voor wanneer de hele les is voltooid
-    const handleLessonComplete = () => {
+    const handleLessonComplete = async () => {
         const totalCorrect = results.filter(r => r.isCorrect).length;
-        const score = Math.round((totalCorrect / exercises.length) * 100);
+        const score = Math.round((totalCorrect / Math.max(1, exercises.length)) * 100);
         const totalXP = results.reduce((sum, r) => {
             const exercise = exercises.find(e => e.id === r.exerciseId);
             return sum + (r.isCorrect ? (exercise?.xpReward || 0) : 0);
         }, 0);
+        const timeSpent = results.reduce((sum, r) => sum + (r.timeSpent || 0), 0);
 
-        // Toon resultaten of navigeer naar volgende pagina
-        alert(`Les voltooid!\nScore: ${score}%\nXP verdiend: ${totalXP}`);
-
-        if (user) {
-            navigate('/dashboard');
+        if (user && lessonId) {
+            try {
+                if (!hasSavedCompletion) {
+                    await completeLessonHandler(user.uid, lessonId, score, timeSpent, totalXP, navigate);
+                } else {
+                    navigate('/lessons');
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        } else {
+            // Fallback: geen gebruiker ingelogd
+            alert(`Les voltooid!\nScore: ${score}%\nXP verdiend: ${totalXP}`);
+            navigate('/lessons');
         }
     };
 
@@ -218,7 +258,7 @@ export default function LessonDetailPage() {
                                 Je hebt {content.data.exerciseIds.length} oefeningen voor dit onderdeel
                             </p>
                             <button
-                                onClick={() => setShowContent(false)}
+                                onClick={() => { setShowContent(false); }}
                                 className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
                             >
                                 Start Oefeningen
@@ -269,6 +309,12 @@ export default function LessonDetailPage() {
               ~{lesson.estimatedMinutes} min
             </span>
                     </div>
+                    {/* Huidige voortgang */}
+                    {user && lessonId && (
+                        <div className="mt-3 text-sm text-gray-700">
+                            <LessonProgress userId={user.uid} lessonId={lessonId} />
+                        </div>
+                    )}
                 </div>
 
                 {renderLessonContent()}
@@ -282,10 +328,11 @@ export default function LessonDetailPage() {
 
     if (isFinished || !currentExercise) {
         const totalCorrect = results.filter(r => r.isCorrect).length;
-        const score = Math.round((totalCorrect / exercises.length) * 100);
+        const score = Math.round((totalCorrect / Math.max(1, exercises.length)) * 100);
+        const mistakes = results.filter(r => !r.isCorrect).map(r => r.exerciseId);
 
         return (
-            <div className="max-w-2xl mx-auto">
+            <div className="max-w-3xl mx-auto">
                 <div className="bg-white rounded-lg shadow-lg p-8 text-center">
                     <div className="text-6xl mb-4">🎉</div>
                     <h2 className="text-3xl font-bold mb-4">Les Voltooid!</h2>
@@ -309,6 +356,24 @@ export default function LessonDetailPage() {
                         </div>
                     </div>
 
+                    {/* Overzicht per oefening */}
+                    <div className="text-left bg-gray-50 rounded-lg p-4 mb-8">
+                        <h3 className="font-semibold mb-3">Overzicht</h3>
+                        <ul className="space-y-2">
+                            {results.map((r, i) => {
+                                const ex = exercises.find(e => e.id === r.exerciseId);
+                                return (
+                                    <li key={r.exerciseId + String(i)} className="flex items-center justify-between text-sm">
+                                        <span className="truncate mr-3">{ex?.question || ex?.prompt || ex?.title || `Oefening ${i+1}`}</span>
+                                        <span className={r.isCorrect ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
+                                            {r.isCorrect ? 'Goed' : 'Fout'}
+                                        </span>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    </div>
+
                     <div className="flex gap-4 justify-center">
                         <button
                             onClick={() => {
@@ -321,7 +386,21 @@ export default function LessonDetailPage() {
                             Bekijk Les Opnieuw
                         </button>
                         <button
-                            onClick={() => navigate('/lessons')}
+                            onClick={() => navigate('/dashboard')}
+                            className="px-6 py-3 border-2 border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50"
+                        >
+                            Naar Dashboard
+                        </button>
+                        <button
+                            onClick={() => navigate('/review', { state: { mistakeIds: mistakes } })}
+                            className="px-6 py-3 border-2 border-red-500 text-red-600 rounded-lg hover:bg-red-50"
+                            disabled={mistakes.length === 0}
+                            title={mistakes.length === 0 ? 'Geen fouten om te herzien' : 'Bekijk je fouten'}
+                        >
+                            Bekijk fouten
+                        </button>
+                        <button
+                            onClick={handleLessonComplete}
                             className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
                         >
                             Volgende Les

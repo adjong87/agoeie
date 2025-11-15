@@ -1,5 +1,5 @@
 // src/components/exercises/ExerciseWrapper.tsx
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import MultipleChoiceComponent from "./MultipleChoiceComponent.tsx";
 import FillBlankComponent from "./FillBlankComponent.tsx";
 import FillBlankMultipleComponent from "./FillBlankMultipleComponent.tsx";
@@ -15,10 +15,18 @@ interface Props {
 }
 
 export default function ExerciseWrapper({ exercise, onComplete }: Props) {
-    const [startTime] = useState(Date.now());
+    const [startTime, setStartTime] = useState(Date.now());
     const [showFeedback, setShowFeedback] = useState(false);
     const [isCorrect, setIsCorrect] = useState(false);
     const [userAnswer, setUserAnswer] = useState<string | string[] | undefined>();
+
+    // Reset transient UI state when the exercise changes
+    useEffect(() => {
+        setShowFeedback(false);
+        setIsCorrect(false);
+        setUserAnswer(undefined);
+        setStartTime(Date.now());
+    }, [exercise.id]);
 
     const handleSubmit = (correct: boolean, answer?: string | string[]) => {
         const timeSpent = Math.floor((Date.now() - startTime) / 1000);
@@ -33,28 +41,54 @@ export default function ExerciseWrapper({ exercise, onComplete }: Props) {
                 exerciseId: exercise.id,
                 isCorrect: correct,
                 timeSpent,
+                // Use the submitted answer directly to avoid any stale state
                 userAnswer: answer,
             });
         }, 2000);
+    };
+
+    // Allow skipping unsupported exercise types without blocking the flow
+    const skipUnknown = () => {
+        console.warn('Unsupported exercise type encountered:', exercise.type);
+        const timeSpent = Math.floor((Date.now() - startTime) / 1000);
+        onComplete({
+            exerciseId: exercise.id,
+            isCorrect: false,
+            timeSpent,
+            userAnswer: undefined,
+        });
     };
 
     // Render correct component based on type
     const renderExercise = () => {
         switch (exercise.type) {
             case 'multiple_choice':
-                return <MultipleChoiceComponent exercise={exercise} onSubmit={handleSubmit} />;
+                return <MultipleChoiceComponent key={exercise.id} exercise={exercise} onSubmit={handleSubmit} />;
             case 'fill_blank':
-                return <FillBlankComponent exercise={exercise} onSubmit={handleSubmit} />;
+                return <FillBlankComponent key={exercise.id} exercise={exercise} onSubmit={handleSubmit} />;
             case 'fill_blank_multiple':
-                return <FillBlankMultipleComponent exercise={exercise} onSubmit={handleSubmit} />;
+                return <FillBlankMultipleComponent key={exercise.id} exercise={exercise} onSubmit={handleSubmit} />;
             case 'word_order':
-                return <WordOrderComponent exercise={exercise} onSubmit={handleSubmit} />;
+                return <WordOrderComponent key={exercise.id} exercise={exercise} onSubmit={handleSubmit} />;
             case 'conjugation':
-                return <ConjugationComponent exercise={exercise} onSubmit={handleSubmit} />;
+                return <ConjugationComponent key={exercise.id} exercise={exercise} onSubmit={handleSubmit} />;
             case 'match_pairs':
-                return <MatchPairsComponent exercise={exercise} onSubmit={handleSubmit} />;
+                return <MatchPairsComponent key={exercise.id} exercise={exercise} onSubmit={handleSubmit} />;
             default:
-                return <div>Onbekend oefening type</div>;
+                return (
+                    <div className="text-center">
+                        <div className="mb-3 text-red-600 font-semibold">Onbekend oefeningtype: {String(exercise.type)}</div>
+                        <p className="text-gray-700 mb-4">
+                            Deze oefening wordt nog niet ondersteund. Je kunt deze stap overslaan en doorgaan met de les.
+                        </p>
+                        <button
+                            onClick={skipUnknown}
+                            className="px-6 py-3 border-2 border-gray-400 text-gray-700 rounded-lg hover:bg-gray-50"
+                        >
+                            Sla deze oefening over
+                        </button>
+                    </div>
+                );
         }
     };
 

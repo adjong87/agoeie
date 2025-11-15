@@ -27,7 +27,7 @@ export default function ConjugationComponent({ exercise, onSubmit }: Props) {
 
     return (
         <div>
-            <h3 className="text-xl font-semibold mb-2">{exercise.question}</h3>
+            <h3 className="text-xl font-semibold mb-2">Vervoeg het werkwoord</h3>
             <p className="text-gray-600 mb-6">
                 Werkwoord: <span className="font-semibold">{exercise.verb}</span> ({exercise.translation})
             </p>
